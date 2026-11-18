@@ -9,8 +9,8 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(200);
         res.end(JSON.stringify({
             id: 'org.goalodds.topmovies',
-            version: '1.0.0',
-            name: 'Top 8.5+',
+            version: '1.0.1', // Am schimbat versiunea pentru a forte cache-ul sa se reseteze
+            name: 'Top Filme 8.5+',
             description: 'Filme și seriale IMDb 8.5+',
             resources: ['catalog'],
             types: ['movie', 'series'],
@@ -26,24 +26,25 @@ const server = http.createServer(async (req, res) => {
         const type = req.url.includes('/series/') ? 'series' : 'movie';
         try {
             let allMetas = [];
-            // Tragem primele 5 pagini (5 x 20 = 100 de rezultate)
-            // Pentru seriale, coborâm puțin voturile minime pentru a avea rezultate
-            const minVotes = type === 'movie' ? 3000 : 1000;
             
+            // Aici e magia: tragem 5 pagini de "Top Rated" (cele mai votate)
             for (let page = 1; page <= 5; page++) {
-                const response = await fetch(`https://api.themoviedb.org/3/discover/${type}?api_key=${TMDB_API_KEY}&sort_by=vote_average.desc&vote_count.gte=${minVotes}&vote_average.gte=8.5&language=ro-RO&page=${page}`);
+                // Folosim top_rated care e mult mai stabil decat discover
+                const response = await fetch(`https://api.themoviedb.org/3/${type}/top_rated?api_key=${TMDB_API_KEY}&language=ro-RO&page=${page}`);
                 const data = await response.json();
 
                 if (data.results && data.results.length > 0) {
-                    const pageMetas = data.results.map(item => ({
-                        id: `tt${item.id}`,
-                        type: type,
-                        name: item.title || item.name,
-                        poster: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : 'https://via.placeholder.com/500x750?text=No+Poster',
-                        description: item.overview || "Fără descriere.",
-                        releaseInfo: (item.release_date || item.first_air_date || '').split('-')[0],
-                        imdbRating: item.vote_average ? item.vote_average.toFixed(1) : "N/A"
-                    }));
+                    const pageMetas = data.results
+                        .filter(item => (item.vote_average || 0) >= 8.5) // Filtrul tau
+                        .map(item => ({
+                            id: `tt${item.id}`,
+                            type: type,
+                            name: item.title || item.name,
+                            poster: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : 'https://via.placeholder.com/500x750?text=No+Poster',
+                            description: item.overview || "Fără descriere.",
+                            releaseInfo: (item.release_date || item.first_air_date || '').split('-')[0],
+                            imdbRating: item.vote_average ? item.vote_average.toFixed(1) : "N/A"
+                        }));
                     allMetas = allMetas.concat(pageMetas);
                 }
             }
