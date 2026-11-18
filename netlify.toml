@@ -3,10 +3,12 @@
 
 [[redirects]]
   from = "/manifest.json"
-  to = "/.netlify/functions/addon"
+  to = "/.netlify/functions/addon/manifest.json"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/catalog/:type/:id.json"
-  to = "/.netlify/functions/addon?type=:type&id=:id"
+  to = "/.netlify/functions/addon/catalog/:type/:id.json"
   status = 200
+  force = true
