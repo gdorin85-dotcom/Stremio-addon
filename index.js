@@ -9,14 +9,15 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(200);
         res.end(JSON.stringify({
             id: 'org.goalodds.topmovies',
-            version: '1.0.4', // Versiune noua
+            version: '1.0.5', 
             name: 'Top Filme 8.0+',
             description: 'Filme și seriale cu nota buna',
             resources: ['catalog'],
             types: ['movie', 'series'],
             catalogs: [
                 { type: 'movie', id: 'top_movies', name: 'Top Movies (8.0+)' },
-                { type: 'series', id: 'top_series', name: 'Top Series (8.0+)' }
+                // Am schimbat ID-ul aici ca sa fortam refresh-ul
+                { type: 'series', id: 'best_series', name: 'Top Series (All)' } 
             ]
         }));
         return;
@@ -27,17 +28,18 @@ const server = http.createServer(async (req, res) => {
         try {
             let allMetas = [];
             
-            const pagesToFetch = type === 'movie' ? 20 : 10;
+            // Tragem 10 pagini pentru ambele
+            const pagesToFetch = 10;
             
             for (let page = 1; page <= pagesToFetch; page++) {
-                // FOLOSIM TOP_RATED PENTRU AMBELE (si filme, si seriale)
                 const endpoint = 'top_rated';
                 const response = await fetch(`https://api.themoviedb.org/3/${type}/${endpoint}?api_key=${TMDB_API_KEY}&language=ro-RO&page=${page}`);
                 const data = await response.json();
 
                 if (data.results && data.results.length > 0) {
                     const pageMetas = data.results
-                        .filter(item => (item.vote_average || 0) >= 8.0) 
+                        // FILTRUL: Doar la filme punem 8.0. La seriale le luam pe toate!
+                        .filter(item => type === 'series' || (item.vote_average || 0) >= 8.0) 
                         .map(item => ({
                             id: `tt${item.id}`,
                             type: type,
@@ -67,4 +69,4 @@ const server = http.createServer(async (req, res) => {
 const port = process.env.PORT || 3000;
 server.listen(port, () => {
     console.log(`Server running on port ${port}`);
-});
+}); nu 
