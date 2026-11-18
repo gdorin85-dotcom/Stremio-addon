@@ -9,7 +9,7 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(200);
         res.end(JSON.stringify({
             id: 'org.goalodds.topmovies',
-            version: '1.0.1', // Am schimbat versiunea pentru a forte cache-ul sa se reseteze
+            version: '1.0.2', // Versiune noua pentru cache
             name: 'Top Filme 8.5+',
             description: 'Filme și seriale IMDb 8.5+',
             resources: ['catalog'],
@@ -27,15 +27,19 @@ const server = http.createServer(async (req, res) => {
         try {
             let allMetas = [];
             
-            // Aici e magia: tragem 5 pagini de "Top Rated" (cele mai votate)
-            for (let page = 1; page <= 5; page++) {
-                // Folosim top_rated care e mult mai stabil decat discover
-                const response = await fetch(`https://api.themoviedb.org/3/${type}/top_rated?api_key=${TMDB_API_KEY}&language=ro-RO&page=${page}`);
+            // Pentru filme tragem 10 pagini (200 de filme), pentru seriale 5 pagini (100 de seriale)
+            const pagesToFetch = type === 'movie' ? 10 : 5;
+            
+            for (let page = 1; page <= pagesToFetch; page++) {
+                // Pentru seriale folosim 'popular' ca sa avem rezultate, pentru filme 'top_rated'
+                const endpoint = type === 'movie' ? 'top_rated' : 'popular';
+                const response = await fetch(`https://api.themoviedb.org/3/${type}/${endpoint}?api_key=${TMDB_API_KEY}&language=ro-RO&page=${page}`);
                 const data = await response.json();
 
                 if (data.results && data.results.length > 0) {
                     const pageMetas = data.results
-                        .filter(item => (item.vote_average || 0) >= 8.5) // Filtrul tau
+                        // Filtrul: nota >= 8.5. (Am scos filtrul de voturi, ca sa nu mai pierdem filme bune)
+                        .filter(item => (item.vote_average || 0) >= 8.5) 
                         .map(item => ({
                             id: `tt${item.id}`,
                             type: type,
