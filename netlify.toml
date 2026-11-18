@@ -1,0 +1,12 @@
+[build]
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/manifest.json"
+  to = "/.netlify/functions/addon"
+  status = 200
+
+[[redirects]]
+  from = "/catalog/:type/:id.json"
+  to = "/.netlify/functions/addon?type=:type&id=:id"
+  status = 200
