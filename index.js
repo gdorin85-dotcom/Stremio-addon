@@ -25,21 +25,31 @@ const server = http.createServer(async (req, res) => {
     if (req.url.includes('/catalog')) {
         const type = req.url.includes('/series/') ? 'series' : 'movie';
         try {
-            const response = await fetch(`https://api.themoviedb.org/3/discover/${type}?api_key=${TMDB_API_KEY}&sort_by=vote_average.desc&vote_count.gte=3000&vote_average.gte=8.5&language=ro-RO`);
-            const data = await response.json();
+            let allMetas = [];
+            // Tragem primele 5 pagini (5 x 20 = 100 de rezultate)
+            // Pentru seriale, coborâm puțin voturile minime pentru a avea rezultate
+            const minVotes = type === 'movie' ? 3000 : 1000;
+            
+            for (let page = 1; page <= 5; page++) {
+                const response = await fetch(`https://api.themoviedb.org/3/discover/${type}?api_key=${TMDB_API_KEY}&sort_by=vote_average.desc&vote_count.gte=${minVotes}&vote_average.gte=8.5&language=ro-RO&page=${page}`);
+                const data = await response.json();
 
-            const metas = (data.results || []).map(item => ({
-                id: `tt${item.id}`,
-                type: type,
-                name: item.title || item.name,
-                poster: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : 'https://via.placeholder.com/500x750?text=No+Poster',
-                description: item.overview || "Fără descriere.",
-                releaseInfo: (item.release_date || item.first_air_date || '').split('-')[0],
-                imdbRating: item.vote_average ? item.vote_average.toFixed(1) : "N/A"
-            }));
+                if (data.results && data.results.length > 0) {
+                    const pageMetas = data.results.map(item => ({
+                        id: `tt${item.id}`,
+                        type: type,
+                        name: item.title || item.name,
+                        poster: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : 'https://via.placeholder.com/500x750?text=No+Poster',
+                        description: item.overview || "Fără descriere.",
+                        releaseInfo: (item.release_date || item.first_air_date || '').split('-')[0],
+                        imdbRating: item.vote_average ? item.vote_average.toFixed(1) : "N/A"
+                    }));
+                    allMetas = allMetas.concat(pageMetas);
+                }
+            }
 
             res.writeHead(200);
-            res.end(JSON.stringify({ metas: metas }));
+            res.end(JSON.stringify({ metas: allMetas }));
         } catch (e) {
             res.writeHead(500);
             res.end(JSON.stringify({ error: e.message }));
