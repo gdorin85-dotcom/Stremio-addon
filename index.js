@@ -9,9 +9,9 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(200);
         res.end(JSON.stringify({
             id: 'org.goalodds.topmovies',
-            version: '1.0.6', 
-            name: 'Top Filme 8.0+',
-            description: 'Filme și seriale cu nota buna',
+            version: '1.0.7', 
+            name: 'Top Filme & Seriale',
+            description: 'Filme și seriale de top',
             resources: ['catalog'],
             types: ['movie', 'series'],
             catalogs: [
@@ -25,32 +25,34 @@ const server = http.createServer(async (req, res) => {
     if (req.url.includes('/catalog')) {
         const type = req.url.includes('/series/') ? 'series' : 'movie';
         try {
-            let allMetas = [];
-            const pagesToFetch = 10;
+            // Luam DOAR 2 pagini ca sa nu mai dam rate-limit la TMDB
+            const response = await fetch(`https://api.themoviedb.org/3/${type}/top_rated?api_key=${TMDB_API_KEY}&language=ro-RO&page=1`);
+            const data1 = await response.json();
             
-            for (let page = 1; page <= pagesToFetch; page++) {
-                const endpoint = 'top_rated';
-                const response = await fetch(`https://api.themoviedb.org/3/${type}/${endpoint}?api_key=${TMDB_API_KEY}&language=ro-RO&page=${page}`);
-                const data = await response.json();
+            // Facem o mica pauza de 300ms intre cereri
+            await new Promise(r => setTimeout(r, 300));
+            
+            const response2 = await fetch(`https://api.themoviedb.org/3/${type}/top_rated?api_key=${TMDB_API_KEY}&language=ro-RO&page=2`);
+            const data2 = await response2.json();
 
-                if (data.results && data.results.length > 0) {
-                    const pageMetas = data.results
-                        .filter(item => type === 'series' || (item.vote_average || 0) >= 8.0) 
-                        .map(item => ({
-                            id: `tt${item.id}`,
-                            type: type,
-                            name: item.title || item.name,
-                            poster: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : 'https://via.placeholder.com/500x750?text=No+Poster',
-                            description: item.overview || "Fără descriere.",
-                            releaseInfo: (item.release_date || item.first_air_date || '').split('-')[0],
-                            imdbRating: item.vote_average ? item.vote_average.toFixed(1) : "N/A"
-                        }));
-                    allMetas = allMetas.concat(pageMetas);
-                }
-            }
+            let combined = [];
+            if (data1.results) combined = combined.concat(data1.results);
+            if (data2.results) combined = combined.concat(data2.results);
+
+            const metas = combined
+                .filter(item => type === 'series' || (item.vote_average || 0) >= 8.0) 
+                .map(item => ({
+                    id: `tt${item.id}`,
+                    type: type,
+                    name: item.title || item.name,
+                    poster: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : 'https://via.placeholder.com/500x750?text=No+Poster',
+                    description: item.overview || "Fără descriere.",
+                    releaseInfo: (item.release_date || item.first_air_date || '').split('-')[0],
+                    imdbRating: item.vote_average ? item.vote_average.toFixed(1) : "N/A"
+                }));
 
             res.writeHead(200);
-            res.end(JSON.stringify({ metas: allMetas }));
+            res.end(JSON.stringify({ metas: metas }));
         } catch (e) {
             res.writeHead(500);
             res.end(JSON.stringify({ error: e.message }));
