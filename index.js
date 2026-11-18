@@ -9,15 +9,14 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(200);
         res.end(JSON.stringify({
             id: 'org.goalodds.topmovies',
-            version: '1.0.5', 
+            version: '1.0.6', 
             name: 'Top Filme 8.0+',
             description: 'Filme și seriale cu nota buna',
             resources: ['catalog'],
             types: ['movie', 'series'],
             catalogs: [
                 { type: 'movie', id: 'top_movies', name: 'Top Movies (8.0+)' },
-                // Am schimbat ID-ul aici ca sa fortam refresh-ul
-                { type: 'series', id: 'best_series', name: 'Top Series (All)' } 
+                { type: 'series', id: 'best_series', name: 'Top Series (All)' }
             ]
         }));
         return;
@@ -27,8 +26,6 @@ const server = http.createServer(async (req, res) => {
         const type = req.url.includes('/series/') ? 'series' : 'movie';
         try {
             let allMetas = [];
-            
-            // Tragem 10 pagini pentru ambele
             const pagesToFetch = 10;
             
             for (let page = 1; page <= pagesToFetch; page++) {
@@ -38,7 +35,6 @@ const server = http.createServer(async (req, res) => {
 
                 if (data.results && data.results.length > 0) {
                     const pageMetas = data.results
-                        // FILTRUL: Doar la filme punem 8.0. La seriale le luam pe toate!
                         .filter(item => type === 'series' || (item.vote_average || 0) >= 8.0) 
                         .map(item => ({
                             id: `tt${item.id}`,
@@ -69,4 +65,4 @@ const server = http.createServer(async (req, res) => {
 const port = process.env.PORT || 3000;
 server.listen(port, () => {
     console.log(`Server running on port ${port}`);
-}); nu 
+});
