@@ -9,14 +9,14 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(200);
         res.end(JSON.stringify({
             id: 'org.goalodds.topmovies',
-            version: '1.0.2', // Versiune noua pentru cache
-            name: 'Top Filme 8.5+',
-            description: 'Filme și seriale IMDb 8.5+',
+            version: '1.0.3', // Versiune noua
+            name: 'Top Filme 8.0+',
+            description: 'Filme și seriale cu nota buna',
             resources: ['catalog'],
             types: ['movie', 'series'],
             catalogs: [
-                { type: 'movie', id: 'top_movies', name: 'Top Movies (8.5+)' },
-                { type: 'series', id: 'top_series', name: 'Top Series (8.5+)' }
+                { type: 'movie', id: 'top_movies', name: 'Top Movies (8.0+)' },
+                { type: 'series', id: 'top_series', name: 'Top Series (8.0+)' }
             ]
         }));
         return;
@@ -27,19 +27,18 @@ const server = http.createServer(async (req, res) => {
         try {
             let allMetas = [];
             
-            // Pentru filme tragem 10 pagini (200 de filme), pentru seriale 5 pagini (100 de seriale)
-            const pagesToFetch = type === 'movie' ? 10 : 5;
+            // Aici mărim numărul de pagini (20 de pagini = 400 de filme)
+            const pagesToFetch = type === 'movie' ? 20 : 10;
             
             for (let page = 1; page <= pagesToFetch; page++) {
-                // Pentru seriale folosim 'popular' ca sa avem rezultate, pentru filme 'top_rated'
                 const endpoint = type === 'movie' ? 'top_rated' : 'popular';
                 const response = await fetch(`https://api.themoviedb.org/3/${type}/${endpoint}?api_key=${TMDB_API_KEY}&language=ro-RO&page=${page}`);
                 const data = await response.json();
 
                 if (data.results && data.results.length > 0) {
                     const pageMetas = data.results
-                        // Filtrul: nota >= 8.5. (Am scos filtrul de voturi, ca sa nu mai pierdem filme bune)
-                        .filter(item => (item.vote_average || 0) >= 8.5) 
+                        // AM SCHIMBAT AICI: Acceptăm și note de 8.0
+                        .filter(item => (item.vote_average || 0) >= 8.0) 
                         .map(item => ({
                             id: `tt${item.id}`,
                             type: type,
